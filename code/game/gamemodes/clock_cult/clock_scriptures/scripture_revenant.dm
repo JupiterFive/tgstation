@@ -9,8 +9,8 @@
 	desc = "Taps the limitless power of Inath-neq, one of Ratvar's four generals. The benevolence of Inath-Neq will grant complete invulnerability to all servants in range for fifteen seconds."
 	invocations = list("I call upon you, Vanguard!!", "Let the Resonant Cogs turn once more!!", "Grant me and my allies the strength to vanquish our foes!!")
 	channel_time = 150
-	required_components = list("vanguard_cogwheel" = 6, "guvax_capacitor" = 3, "replicant_alloy" = 3, "hierophant_ansible" = 3)
-	consumed_components = list("vanguard_cogwheel" = 6, "guvax_capacitor" = 3, "replicant_alloy" = 3, "hierophant_ansible" = 3)
+	required_components = list(VANGUARD_COGWHEEL = 6, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 3, HIEROPHANT_ANSIBLE = 3)
+	consumed_components = list(VANGUARD_COGWHEEL = 6, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 3, HIEROPHANT_ANSIBLE = 3)
 	usage_tip = "Those affected by this scripture are only weak to things that outright destroy bodies, such as bombs or the singularity."
 	tier = SCRIPTURE_REVENANT
 	sort_priority = 2
@@ -45,8 +45,8 @@
 	clockwork proselytizers will cost no replicant alloy to use."
 	invocations = list("I call upon you, Armorer!!", "Let your machinations reign on this miserable station!!", "Let your power flow through the tools of your master!!")
 	channel_time = 150
-	required_components = list("belligerent_eye" = 3, "vanguard_cogwheel" = 3, "guvax_capacitor" = 3, "replicant_alloy" = 6)
-	consumed_components = list("belligerent_eye" = 3, "vanguard_cogwheel" = 3, "guvax_capacitor" = 3, "replicant_alloy" = 6)
+	required_components = list(BELLIGERENT_EYE = 3, VANGUARD_COGWHEEL = 3, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 6)
+	consumed_components = list(BELLIGERENT_EYE = 3, VANGUARD_COGWHEEL = 3, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 6)
 	usage_tip = "Ocular wardens will become empowered, clockwork proselytizers will require no alloy, tinkerer's daemons will produce twice as quickly, \
 	and interdiction lenses, mending motors, mania motors, tinkerer's daemons, and clockwork obelisks will all require no power."
 	tier = SCRIPTURE_REVENANT
@@ -102,8 +102,8 @@
 	for all non-servant humans on the same z-level as them. The power of this scripture falls off somewhat with distance, and certain things may reduce its effects."
 	invocations = list("I call upon you, Fright!!", "Let your power shatter the sanity of the weak-minded!!", "Let your tendrils hold sway over all!!")
 	channel_time = 150
-	required_components = list("belligerent_eye" = 3, "vanguard_cogwheel" = 3, "guvax_capacitor" = 6, "hierophant_ansible" = 3)
-	consumed_components = list("belligerent_eye" = 3, "vanguard_cogwheel" = 3, "guvax_capacitor" = 6, "hierophant_ansible" = 3)
+	required_components = list(BELLIGERENT_EYE = 3, VANGUARD_COGWHEEL = 3, GUVAX_CAPACITOR = 6, HIEROPHANT_ANSIBLE = 3)
+	consumed_components = list(BELLIGERENT_EYE = 3, VANGUARD_COGWHEEL = 3, GUVAX_CAPACITOR = 6, HIEROPHANT_ANSIBLE = 3)
 	usage_tip = "Causes brain damage, hallucinations, confusion, and dizziness in massive amounts."
 	tier = SCRIPTURE_REVENANT
 	sort_priority = 4
@@ -173,8 +173,8 @@
 	seconds, anyone near you will be struck by a devastating lightning bolt."
 	invocations = list("I call upon you, Amperage!!", "Let your energy flow through me!!", "Let your boundless power shatter stars!!")
 	channel_time = 150
-	required_components = list("belligerent_eye" = 3, "guvax_capacitor" = 3, "replicant_alloy" = 3, "hierophant_ansible" = 6)
-	consumed_components = list("belligerent_eye" = 3, "guvax_capacitor" = 3, "replicant_alloy" = 3, "hierophant_ansible" = 6)
+	required_components = list(BELLIGERENT_EYE = 3, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 3, HIEROPHANT_ANSIBLE = 6)
+	consumed_components = list(BELLIGERENT_EYE = 3, GUVAX_CAPACITOR = 3, REPLICANT_ALLOY = 3, HIEROPHANT_ANSIBLE = 6)
 	usage_tip = "Struck targets will also be knocked down for about sixteen seconds."
 	tier = SCRIPTURE_REVENANT
 	sort_priority = 5
@@ -195,6 +195,7 @@
 	<span class='userdanger'>You feel limitless power surging through you!</span>")
 	playsound(invoker, 'sound/magic/clockwork/invoke_general.ogg', 50, 0)
 	playsound(invoker, 'sound/magic/lightning_chargeup.ogg', 100, 0)
+	var/oldcolor = invoker.color
 	animate(invoker, color = list(rgb(255, 255, 255), rgb(255, 255, 255), rgb(255, 255, 255), rgb(0,0,0)), time = 88) //Gradual advancement to extreme brightness
 	sleep(88)
 	if(invoker)
@@ -203,7 +204,8 @@
 		<span class='userdanger'>TOO... MUCH! CAN'T... TAKE IT!</span>")
 		playsound(invoker, 'sound/magic/lightningbolt.ogg', 100, 0)
 		if(invoker.stat == CONSCIOUS)
-			animate(invoker, color = initial(invoker.color), time = 10)
+			animate(invoker, color = oldcolor, time = 10)
+			addtimer(invoker, "update_atom_colour", 10)
 			for(var/mob/living/L in view(7, invoker))
 				if(is_servant_of_ratvar(L))
 					continue
