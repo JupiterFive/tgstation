@@ -83,14 +83,15 @@
 
 //sometimes we want to ignore that we don't have the required amount of legs.
 /mob/proc/get_leg_ignore()
-	return 0
+	return FALSE
 
 /mob/living/carbon/alien/larva/get_leg_ignore()
-	return 1
+	return TRUE
 
 /mob/living/carbon/human/get_leg_ignore()
-	if(FLYING in dna.species.specflags)
-		return 1
+	if((movement_type & FLYING) || floating)
+		return TRUE
+	return FALSE
 
 /mob/living/proc/get_missing_limbs()
 	return list()
@@ -117,9 +118,12 @@
 		var/obj/item/bodypart/L = X
 		for(var/obj/item/I in L.embedded_objects)
 			L.embedded_objects -= I
-			I.loc = T
+			I.forceMove(T)
 
 	clear_alert("embeddedobject")
+	GET_COMPONENT_FROM(mood, /datum/component/mood, src)
+	if(mood)
+		mood.clear_event("embedded")
 
 /mob/living/carbon/proc/has_embedded_objects()
 	. = 0
@@ -245,12 +249,12 @@
 		if((!O.use_digitigrade && swap_back == FALSE) || (O.use_digitigrade && swap_back == TRUE))
 			if(O.body_part == LEG_LEFT)
 				if(swap_back == TRUE)
-					N = new /obj/item/bodypart/l_leg/
+					N = new /obj/item/bodypart/l_leg
 				else
 					N = new /obj/item/bodypart/l_leg/digitigrade
 			else if(O.body_part == LEG_RIGHT)
 				if(swap_back == TRUE)
-					N = new /obj/item/bodypart/r_leg/
+					N = new /obj/item/bodypart/r_leg
 				else
 					N = new /obj/item/bodypart/r_leg/digitigrade
 		if(!N)
@@ -270,4 +274,4 @@
 					U.adjusted = DIGITIGRADE_STYLE
 				H.update_inv_w_uniform()
 		if(H.shoes && !swap_back)
-			H.unEquip(H.shoes)
+			H.dropItemToGround(H.shoes)

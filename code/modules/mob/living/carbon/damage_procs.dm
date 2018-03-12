@@ -1,12 +1,12 @@
 
 
-/mob/living/carbon/apply_damage(damage, damagetype = BRUTE, def_zone = null, blocked = 0)
+/mob/living/carbon/apply_damage(damage, damagetype = BRUTE, def_zone = null, blocked = FALSE)
 	var/hit_percent = (100-blocked)/100
 	if(!damage || hit_percent <= 0)
 		return 0
 
 	var/obj/item/bodypart/BP = null
-	if(islimb(def_zone)) //we specified a bodypart object
+	if(isbodypart(def_zone)) //we specified a bodypart object
 		BP = def_zone
 	else
 		if(!def_zone)
@@ -36,6 +36,8 @@
 			adjustCloneLoss(damage * hit_percent)
 		if(STAMINA)
 			adjustStaminaLoss(damage * hit_percent)
+		if(BRAIN)
+			adjustBrainLoss(damage * hit_percent)
 	return 1
 
 
@@ -55,25 +57,27 @@
 	return amount
 
 
-/mob/living/carbon/adjustBruteLoss(amount, updating_health = 1)
-	if(status_flags & GODMODE)
-		return 0
+/mob/living/carbon/adjustBruteLoss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && (status_flags & GODMODE))
+		return FALSE
 	if(amount > 0)
-		take_overall_damage(amount, 0)
+		take_overall_damage(amount, 0, updating_health)
 	else
 		heal_overall_damage(-amount, 0, 0, 1, updating_health)
+	return amount
 
-/mob/living/carbon/adjustFireLoss(amount)
-	if(status_flags & GODMODE)
-		return 0
+/mob/living/carbon/adjustFireLoss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && (status_flags & GODMODE))
+		return FALSE
 	if(amount > 0)
-		take_overall_damage(0, amount)
+		take_overall_damage(0, amount, updating_health)
 	else
-		heal_overall_damage(0, -amount)
+		heal_overall_damage(0, -amount, 0, 1, updating_health)
+	return amount
 
 
-/mob/living/carbon/adjustToxLoss(amount, updating_health=1)
-	if(has_dna() && TOXINLOVER in dna.species.specflags) //damage becomes healing and healing becomes damage
+/mob/living/carbon/adjustToxLoss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && has_trait(TRAIT_TOXINLOVER)) //damage becomes healing and healing becomes damage
 		amount = -amount
 		if(amount > 0)
 			blood_volume -= 5*amount
@@ -143,8 +147,8 @@
 		parts -= picked
 	if(updating_health)
 		updatehealth()
-		if(update)
-			update_damage_overlays()
+	if(update)
+		update_damage_overlays()
 
 // damage MANY bodyparts, in random order
 /mob/living/carbon/take_overall_damage(brute, burn, updating_health = 1)
@@ -178,7 +182,7 @@
 /mob/living/carbon/adjustStaminaLoss(amount, updating_stamina = 1)
 	if(status_flags & GODMODE)
 		return 0
-	staminaloss = Clamp(staminaloss + amount, 0, maxHealth*2)
+	staminaloss = CLAMP(staminaloss + amount, 0, maxHealth*2)
 	if(updating_stamina)
 		update_stamina()
 
@@ -189,3 +193,45 @@
 	staminaloss = amount
 	if(updating_stamina)
 		update_stamina()
+
+/mob/living/carbon/getBrainLoss()
+	. = 0
+	var/obj/item/organ/brain/B = getorganslot(ORGAN_SLOT_BRAIN)
+	if(B)
+		. = B.get_brain_damage()
+
+//Some sources of brain damage shouldn't be deadly
+/mob/living/carbon/adjustBrainLoss(amount, maximum = BRAIN_DAMAGE_DEATH)
+	if(status_flags & GODMODE)
+		return 0
+	var/prev_brainloss = getBrainLoss()
+	var/obj/item/organ/brain/B = getorganslot(ORGAN_SLOT_BRAIN)
+	if(!B)
+		return
+	B.adjust_brain_damage(amount, maximum)
+	if(amount <= 0) //cut this early
+		return
+	var/brainloss = getBrainLoss()
+	if(brainloss > BRAIN_DAMAGE_MILD)
+		if(prob((amount * 2) + (brainloss - BRAIN_DAMAGE_MILD - (20 * LAZYLEN(get_traumas())) / 5))) //1 damage|50 brain damage = 4% chance
+			gain_trauma_type(BRAIN_TRAUMA_MILD)
+	if(brainloss > BRAIN_DAMAGE_SEVERE)
+		if(prob(amount + (brainloss - BRAIN_DAMAGE_SEVERE - (20 * LAZYLEN(get_traumas())) / 15))) //1 damage|150 brain damage = 3% chance
+			if(prob(20))
+				gain_trauma_type(BRAIN_TRAUMA_SPECIAL)
+			else
+				gain_trauma_type(BRAIN_TRAUMA_SEVERE)
+
+	if(prev_brainloss < 40 && brainloss >= 40)
+		to_chat(src, "<span class='warning'>You feel lightheaded.</span>")
+	else if(prev_brainloss < 120 && brainloss >= 120)
+		to_chat(src, "<span class='warning'>You feel less in control of your thoughts.</span>")
+	else if(prev_brainloss < 180 && brainloss >= 180)
+		to_chat(src, "<span class='warning'>You can feel your mind flickering on and off...</span>")
+
+/mob/living/carbon/setBrainLoss(amount)
+	var/obj/item/organ/brain/B = getorganslot(ORGAN_SLOT_BRAIN)
+	if(B)
+		var/adjusted_amount = amount - B.get_brain_damage()
+		B.adjust_brain_damage(adjusted_amount, null)
+

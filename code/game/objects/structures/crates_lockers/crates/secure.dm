@@ -2,11 +2,10 @@
 	desc = "A secure crate."
 	name = "secure crate"
 	icon_state = "securecrate"
-	secure = 1
-	locked = 1
-	obj_integrity = 500
+	secure = TRUE
+	locked = TRUE
 	max_integrity = 500
-	armor = list(melee = 30, bullet = 50, laser = 50, energy = 100, bomb = 0, bio = 0, rad = 0, fire = 80, acid = 80)
+	armor = list("melee" = 30, "bullet" = 50, "laser" = 50, "energy" = 100, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 80, "acid" = 80)
 	var/tamperproof = 0
 
 /obj/structure/closet/crate/secure/run_obj_armor(damage_amount, damage_type, damage_flag = 0, attack_dir)
@@ -31,7 +30,11 @@
 
 /obj/structure/closet/crate/secure/proc/boom(mob/user)
 	if(user)
-		user << "<span class='danger'>The crate's anti-tamper system activates!</span>"
+		to_chat(user, "<span class='danger'>The crate's anti-tamper system activates!</span>")
+		var/message = "[ADMIN_LOOKUPFLW(user)] has detonated [src.name]."
+		GLOB.bombers += message
+		message_admins(message)
+		log_game("[key_name(user)] has detonated [src.name].")
 	for(var/atom/movable/AM in src)
 		qdel(AM)
 	explosion(get_turf(src), 0, 1, 5, 5)
@@ -61,3 +64,8 @@
 	desc = "A crate with a lock on it, painted in the scheme of the station's engineers."
 	name = "secure engineering crate"
 	icon_state = "engi_secure_crate"
+
+/obj/structure/closet/crate/secure/science
+	name = "secure science crate"
+	desc = "A crate with a lock on it, painted in the scheme of the station's scientists."
+	icon_state = "scisecurecrate"

@@ -44,7 +44,7 @@
 		return machinery_computer.update_icon()
 
 // This thing is not meant to be used on it's own, get topic data from our machinery owner.
-//obj/item/device/modular_computer/processor/canUseTopic(user, state)
+//obj/item/device/modular_computer/processor/canUseTopic(atom/movable/M, be_close=FALSE, no_dextery=FALSE)
 //	if(!machinery_computer)
 //		return 0
 
@@ -63,6 +63,8 @@
 			machinery_computer.verbs += /obj/machinery/modular_computer/proc/eject_id
 		if(MC_SDD)
 			machinery_computer.verbs += /obj/machinery/modular_computer/proc/eject_disk
+		if(MC_AI)
+			machinery_computer.verbs += /obj/machinery/modular_computer/proc/eject_card
 
 /obj/item/device/modular_computer/processor/remove_verb(path)
 	switch(path)
@@ -70,3 +72,5 @@
 			machinery_computer.verbs -= /obj/machinery/modular_computer/proc/eject_id
 		if(MC_SDD)
 			machinery_computer.verbs -= /obj/machinery/modular_computer/proc/eject_disk
+		if(MC_AI)
+			machinery_computer.verbs -= /obj/machinery/modular_computer/proc/eject_card

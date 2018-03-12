@@ -1,27 +1,18 @@
-/* Alien shit!
- * Contains:
- *		effect/acid
- */
-
-
-/*
- * Acid
- */
 /obj/effect/acid
 	gender = PLURAL
 	name = "acid"
-	desc = "Burbling corrossive stuff."
+	desc = "Burbling corrosive stuff."
 	icon_state = "acid"
-	density = 0
+	density = FALSE
 	opacity = 0
-	anchored = 1
+	anchored = TRUE
 	resistance_flags = FIRE_PROOF | UNACIDABLE | ACID_PROOF
 	layer = ABOVE_NORMAL_TURF_LAYER
 	var/turf/target
 
 
-/obj/effect/acid/New(loc, acid_pwr, acid_amt)
-	..(loc)
+/obj/effect/acid/Initialize(mapload, acid_pwr, acid_amt)
+	. = ..()
 
 	target = get_turf(src)
 
@@ -47,7 +38,7 @@
 		return 0
 
 	if(prob(5))
-		playsound(loc, 'sound/items/Welder.ogg', 100, 1)
+		playsound(loc, 'sound/items/welder.ogg', 100, 1)
 
 	for(var/obj/O in target)
 		if(prob(20) && !(resistance_flags & UNACIDABLE))
@@ -64,20 +55,14 @@
 /obj/effect/acid/Crossed(AM as mob|obj)
 	if(isliving(AM))
 		var/mob/living/L = AM
-		if(ishuman(L))
-			var/mob/living/carbon/human/H = L
-			if(FLYING in H.dna.species.specflags)
-				return
-		else if(isanimal(L))
-			var/mob/living/simple_animal/SA = L
-			if(SA.flying)
-				return
-		if(L.m_intent != "walk" && prob(40))
+		if(L.movement_type & FLYING)
+			return
+		if(L.m_intent != MOVE_INTENT_WALK && prob(40))
 			var/acid_used = min(acid_level*0.05, 20)
 			if(L.acid_act(10, acid_used, "feet"))
 				acid_level = max(0, acid_level - acid_used*10)
 				playsound(L, 'sound/weapons/sear.ogg', 50, 1)
-				L << "<span class='userdanger'>[src] burns you!</span>"
+				to_chat(L, "<span class='userdanger'>[src] burns you!</span>")
 
 //xenomorph corrosive acid
 /obj/effect/acid/alien
@@ -88,7 +73,7 @@
 	. = ..()
 	if(.)
 		if(prob(45))
-			playsound(loc, 'sound/items/Welder.ogg', 100, 1)
+			playsound(loc, 'sound/items/welder.ogg', 100, 1)
 		target_strength--
 		if(target_strength <= 0)
 			target.visible_message("<span class='warning'>[target] collapses under its own weight into a puddle of goop and undigested debris!</span>")

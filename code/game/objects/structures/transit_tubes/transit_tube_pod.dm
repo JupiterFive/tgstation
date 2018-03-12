@@ -2,18 +2,18 @@
 	icon = 'icons/obj/atmospherics/pipes/transit_tube.dmi'
 	icon_state = "pod"
 	animate_movement = FORWARD_STEPS
-	anchored = 1
-	density = 1
+	anchored = TRUE
+	density = TRUE
 	layer = BELOW_OBJ_LAYER
 	var/moving = 0
 	var/datum/gas_mixture/air_contents = new()
 
 
-/obj/structure/transit_tube_pod/New(loc)
-	..()
-	air_contents.assert_gases("o2", "n2")
-	air_contents.gases["o2"][MOLES] = MOLES_O2STANDARD * 2
-	air_contents.gases["n2"][MOLES] = MOLES_N2STANDARD
+/obj/structure/transit_tube_pod/Initialize()
+	. = ..()
+	air_contents.add_gases(/datum/gas/oxygen, /datum/gas/nitrogen)
+	air_contents.gases[/datum/gas/oxygen][MOLES] = MOLES_O2STANDARD
+	air_contents.gases[/datum/gas/nitrogen][MOLES] = MOLES_N2STANDARD
 	air_contents.temperature = T20C
 
 
@@ -28,9 +28,9 @@
 		icon_state = "pod"
 
 /obj/structure/transit_tube_pod/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/weapon/crowbar))
+	if(istype(I, /obj/item/crowbar))
 		if(!moving)
-			playsound(src.loc, I.usesound, 50, 1)
+			I.play_tool_sound(src)
 			if(contents.len)
 				user.visible_message("[user] empties \the [src].", "<span class='notice'>You empty \the [src].</span>")
 				empty_pod()
@@ -40,7 +40,7 @@
 		return ..()
 
 /obj/structure/transit_tube_pod/deconstruct(disassembled = TRUE, mob/user)
-	if(!(flags & NODECONSTRUCT))
+	if(!(flags_1 & NODECONSTRUCT_1))
 		var/atom/location = get_turf(src)
 		if(user)
 			location = user.loc
@@ -54,7 +54,7 @@
 
 /obj/structure/transit_tube_pod/ex_act(severity, target)
 	..()
-	if(!qdeleted(src))
+	if(!QDELETED(src))
 		empty_pod()
 
 /obj/structure/transit_tube_pod/contents_explosion(severity, target)
@@ -62,16 +62,20 @@
 		AM.ex_act(severity, target)
 
 /obj/structure/transit_tube_pod/singularity_pull(S, current_size)
+	..()
 	if(current_size >= STAGE_FIVE)
 		deconstruct(FALSE)
 
 /obj/structure/transit_tube_pod/container_resist(mob/living/user)
+	if(!user.incapacitated())
+		empty_pod()
+		return
 	if(!moving)
 		user.changeNext_move(CLICK_CD_BREAKOUT)
 		user.last_special = world.time + CLICK_CD_BREAKOUT
-		user << "<span class='notice'>You start trying to escape from the pod...</span>"
+		to_chat(user, "<span class='notice'>You start trying to escape from the pod...</span>")
 		if(do_after(user, 600, target = src))
-			user << "<span class='notice'>You manage to open the pod.</span>"
+			to_chat(user, "<span class='notice'>You manage to open the pod.</span>")
 			empty_pod()
 
 /obj/structure/transit_tube_pod/proc/empty_pod(atom/location)
@@ -84,7 +88,8 @@
 /obj/structure/transit_tube_pod/Process_Spacemove()
 	if(moving) //No drifting while moving in the tubes
 		return 1
-	else return ..()
+	else
+		return ..()
 
 /obj/structure/transit_tube_pod/proc/follow_tube()
 	set waitfor = 0
@@ -131,66 +136,28 @@
 		last_delay = current_tube.enter_delay(src, next_dir)
 		sleep(last_delay)
 		setDir(next_dir)
-		loc = next_loc // When moving from one tube to another, skip collision and such.
+		forceMove(next_loc) // When moving from one tube to another, skip collision and such.
 		density = current_tube.density
 
 		if(current_tube && current_tube.should_stop_pod(src, next_dir))
 			current_tube.pod_stopped(src, dir)
 			break
 
-	density = 1
+	density = TRUE
 	moving = 0
 
 	var/obj/structure/transit_tube/TT = locate(/obj/structure/transit_tube) in loc
 	if(!TT || (!(dir in TT.tube_dirs) && !(turn(dir,180) in TT.tube_dirs)))	//landed on a turf without transit tube or not in our direction
 		deconstruct(FALSE)	//we automatically deconstruct the pod
 
-// Should I return a copy here? If the caller edits or del()s the returned
-//  datum, there might be problems if I don't...
 /obj/structure/transit_tube_pod/return_air()
-	var/datum/gas_mixture/GM = new()
-	GM.copy_from(air_contents)
-	return GM
+	return air_contents
 
-// For now, copying what I found in an unused FEA file (and almost identical in a
-//  used ZAS file). Means that assume_air and remove_air don't actually alter the
-//  air contents.
 /obj/structure/transit_tube_pod/assume_air(datum/gas_mixture/giver)
 	return air_contents.merge(giver)
 
 /obj/structure/transit_tube_pod/remove_air(amount)
 	return air_contents.remove(amount)
-
-
-
-// Called when a pod arrives at, and before a pod departs from a station,
-//  giving it a chance to mix its internal air supply with the turf it is
-//  currently on.
-/obj/structure/transit_tube_pod/proc/mix_air()
-	var/datum/gas_mixture/environment = loc.return_air()
-	var/env_pressure = environment.return_pressure()
-	var/int_pressure = air_contents.return_pressure()
-	var/total_pressure = env_pressure + int_pressure
-
-	if(total_pressure == 0)
-		return
-
-	// Math here: Completely made up, not based on realistic equasions.
-	//  Goal is to balance towards equal pressure, but ensure some gas
-	//  transfer in both directions regardless.
-	// Feel free to rip this out and replace it with something better,
-	//  I don't really know much about how gas transfer rates work in
-	//  SS13.
-	var/transfer_in = max(0.1, 0.5 * (env_pressure - int_pressure) / total_pressure)
-	var/transfer_out = max(0.1, 0.3 * (int_pressure - env_pressure) / total_pressure)
-
-	var/datum/gas_mixture/from_env = loc.remove_air(environment.total_moles() * transfer_in)
-	var/datum/gas_mixture/from_int = air_contents.remove(air_contents.total_moles() * transfer_out)
-
-	loc.assume_air(from_int)
-	air_contents.merge(from_env)
-
-
 
 /obj/structure/transit_tube_pod/relaymove(mob/mob, direction)
 	if(istype(mob) && mob.client)
@@ -214,3 +181,6 @@
 					if(TT.has_exit(direction))
 						setDir(direction)
 						return
+
+/obj/structure/transit_tube_pod/return_temperature()
+	return air_contents.temperature

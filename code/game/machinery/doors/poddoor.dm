@@ -4,19 +4,21 @@
 	icon = 'icons/obj/doors/blastdoor.dmi'
 	icon_state = "closed"
 	var/id = 1
-	sub_door = 1
+	layer = BLASTDOOR_LAYER
+	closingLayer = CLOSED_BLASTDOOR_LAYER
+	sub_door = TRUE
 	explosion_block = 3
-	heat_proof = 1
-	safe = 0
-	obj_integrity = 600
+	heat_proof = TRUE
+	safe = FALSE
 	max_integrity = 600
-	armor = list(melee = 50, bullet = 100, laser = 100, energy = 100, bomb = 50, bio = 100, rad = 100, fire = 100, acid = 70)
+	armor = list("melee" = 50, "bullet" = 100, "laser" = 100, "energy" = 100, "bomb" = 50, "bio" = 100, "rad" = 100, "fire" = 100, "acid" = 70)
 	resistance_flags = FIRE_PROOF
 	damage_deflection = 70
+	poddoor = TRUE
 
 /obj/machinery/door/poddoor/preopen
 	icon_state = "open"
-	density = 0
+	density = FALSE
 	opacity = 0
 
 /obj/machinery/door/poddoor/ert
@@ -24,16 +26,17 @@
 
 //special poddoors that open when emergency shuttle docks at centcom
 /obj/machinery/door/poddoor/shuttledock
-	var/checkdir = 4	//door won't open if turf in this dir is space
+	var/checkdir = 4	//door won't open if turf in this dir is `turftype`
+	var/turftype = /turf/open/space
 
 /obj/machinery/door/poddoor/shuttledock/proc/check()
 	var/turf/T = get_step(src, checkdir)
-	if(!isspaceturf(T))
-		addtimer(src, "open", 0, TRUE)
+	if(!istype(T, turftype))
+		INVOKE_ASYNC(src, .proc/open)
 	else
-		addtimer(src, "close", 0, TRUE)
+		INVOKE_ASYNC(src, .proc/close)
 
-/obj/machinery/door/poddoor/Bumped(atom/AM)
+/obj/machinery/door/poddoor/CollidedWith(atom/movable/AM)
 	if(density)
 		return 0
 	else
@@ -49,8 +52,10 @@
 	switch(animation)
 		if("opening")
 			flick("opening", src)
+			playsound(src, 'sound/machines/blastdoor.ogg', 30, 1)
 		if("closing")
 			flick("closing", src)
+			playsound(src, 'sound/machines/blastdoor.ogg', 30, 1)
 
 /obj/machinery/door/poddoor/update_icon()
 	if(density)
@@ -61,6 +66,6 @@
 /obj/machinery/door/poddoor/try_to_activate_door(mob/user)
  	return
 
-obj/machinery/door/poddoor/try_to_crowbar(obj/item/I, mob/user)
+/obj/machinery/door/poddoor/try_to_crowbar(obj/item/I, mob/user)
 	if(stat & NOPOWER)
 		open(1)
